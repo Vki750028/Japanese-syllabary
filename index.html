@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>50音挑戰</title>
+<title>日文反應訓練</title>
 
 <style>
 body {
@@ -14,51 +14,123 @@ body {
   text-align: center;
 }
 
+/* 首頁 */
+#menu {
+  margin-top: 100px;
+}
+
+button {
+  padding: 15px 30px;
+  margin: 10px;
+  font-size: 18px;
+}
+
+/* 遊戲 */
+#game {
+  display: none;
+}
+
 #question {
-  font-size: 80px;
-  margin-top: 30px;
+  font-size: 70px;
+  margin-top: 10px;
 }
 
 #timer {
-  margin-top: 10px;
-  font-size: 20px;
+  margin-top: 5px;
+}
+
+/* 開始畫面 */
+#startScreen {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000c;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  font-size: 28px;
+  z-index: 10;
 }
 
 #options {
   position: relative;
   width: 100vw;
-  height: 60vh;
+  overflow: hidden;
 }
 
+/* 選項圓 */
 .option {
   position: absolute;
   border-radius: 50%;
   background: #333;
-  cursor: pointer;
-  user-select: none;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
-  touch-action: manipulation;
-  transition: 0.2s;
 }
 
-.option:active {
-  transform: scale(0.9);
+/* 準心 */
+#crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  margin-top: -10px;
+  pointer-events: none;
+  display: none;
+}
+
+#crosshair::before,
+#crosshair::after {
+  content: "";
+  position: absolute;
+  background: red;
+}
+
+#crosshair::before {
+  width: 20px;
+  height: 2px;
+  top: 9px;
+}
+
+#crosshair::after {
+  width: 2px;
+  height: 20px;
+  left: 9px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="question"></div>
-<div id="timer">0.0s</div>
-<div id="options"></div>
+<!-- 首頁 -->
+<div id="menu">
+  <h1>日文反應訓練</h1>
+  <button onclick="chooseMode('normal')">🎯 普通模式</button>
+  <button onclick="chooseMode('aim')">🔫 準星模式</button>
+</div>
+
+<!-- 開始畫面 -->
+<div id="startScreen">
+  <div>50音挑戰</div>
+  <button onclick="beginGame()">點擊開始</button>
+</div>
+
+<!-- 遊戲 -->
+<div id="game">
+  <div id="question"></div>
+  <div id="timer"></div>
+  <div id="options"></div>
+</div>
+
+<div id="crosshair"></div>
 
 <script>
-// 🔤 資料（先用少量，之後可以補50音）
+// 題庫
 const data = [
   { jp: "あ", romaji: "a" },
   { jp: "い", romaji: "i" },
@@ -67,19 +139,53 @@ const data = [
   { jp: "お", romaji: "o" }
 ];
 
-let questions = [...data].sort(() => Math.random() - 0.5);
-let current = 0;
-let startTime = Date.now();
+let mode = "normal";
+let questions, current, startTime;
 
-// ⏱ 計時器
+// 選模式
+function chooseMode(m) {
+  mode = m;
+  document.getElementById("menu").style.display = "none";
+  document.getElementById("startScreen").style.display = "flex";
+}
+
+// 開始遊戲
+function beginGame() {
+  document.getElementById("startScreen").style.display = "none";
+  document.getElementById("game").style.display = "block";
+
+  // 🔥 先關掉準心（避免普通模式出現）
+  document.getElementById("crosshair").style.display = "none";
+
+  if (mode === "aim") {
+    document.body.requestPointerLock();
+    document.getElementById("crosshair").style.display = "block";
+  }
+
+  questions = [...data].sort(() => Math.random() - 0.5);
+  current = 0;
+  startTime = Date.now();
+
+  setGameArea();
+  updateTimer();
+  showQuestion();
+}
+
+// 手機高度
+function setGameArea() {
+  document.getElementById("options").style.height =
+    (window.innerHeight - 140) + "px";
+}
+window.addEventListener("resize", setGameArea);
+
+// 計時
 function updateTimer() {
   const t = ((Date.now() - startTime) / 1000).toFixed(1);
   document.getElementById("timer").innerText = t + "s";
   requestAnimationFrame(updateTimer);
 }
-updateTimer();
 
-// 🎯 顯示題目
+// 顯示題目
 function showQuestion() {
   const q = questions[current];
   document.getElementById("question").innerText = q.jp;
@@ -89,84 +195,137 @@ function showQuestion() {
 
   let choices = [q.romaji];
 
-  // 加入錯誤選項
   while (choices.length < 4) {
     const r = data[Math.floor(Math.random() * data.length)].romaji;
     if (!choices.includes(r)) choices.push(r);
   }
 
-  // 打亂
   choices = choices.sort(() => Math.random() - 0.5);
 
+  const rect = optionsDiv.getBoundingClientRect();
   const placed = [];
 
-  choices.forEach((c) => {
+  choices.forEach(c => {
     const div = document.createElement("div");
     div.className = "option";
     div.innerText = c;
 
-    // 🎲 隨機大小（手機可點）
-    let size = 60 + Math.random() * 40; // 60~100px
+    let size = 60 + Math.random() * 40;
 
-    let x, y;
-    let safe = false;
-    let attempts = 0;
+    let x, y, safe = false;
 
-    // 🧠 找不重疊位置
-    while (!safe && attempts < 50) {
+    while (!safe) {
       safe = true;
-
-      x = Math.random() * 70 + 10; // 避免靠邊
-      y = Math.random() * 50 + 20;
+      x = Math.random() * (rect.width - size);
+      y = Math.random() * (rect.height - size);
 
       for (let p of placed) {
-        const dx = p.x - x;
-        const dy = p.y - y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < 20) {
+        let dx = p.x - x;
+        let dy = p.y - y;
+        if (Math.sqrt(dx*dx + dy*dy) < 80) {
           safe = false;
           break;
         }
       }
-
-      attempts++;
     }
 
-    placed.push({ x, y });
+    placed.push({x,y});
 
-    // 🎨 套用位置與大小
-    div.style.left = x + "vw";
-    div.style.top = y + "vh";
+    div.style.left = x + "px";
+    div.style.top = y + "px";
     div.style.width = size + "px";
     div.style.height = size + "px";
     div.style.fontSize = size * 0.3 + "px";
 
-    // 🎮 點擊邏輯
-    div.onclick = () => {
-      if (c === q.romaji) {
-        div.style.background = "green";
-
-        setTimeout(() => {
-          current++;
-          if (current >= questions.length) {
-            alert("完成！時間：" + document.getElementById("timer").innerText);
-            location.reload();
-          } else {
-            showQuestion();
-          }
-        }, 200);
-
-      } else {
-        div.style.background = "red";
-      }
-    };
+    // 普通模式點擊
+    if (mode === "normal") {
+      div.onclick = () => checkAnswer(c, div);
+    }
 
     optionsDiv.appendChild(div);
   });
+
+  if (mode === "aim") {
+    startMovingTargets();
+  }
 }
 
-showQuestion();
+// 判斷
+function checkAnswer(c, div) {
+  const q = questions[current];
+
+  if (c === q.romaji) {
+    div.style.background = "green";
+    setTimeout(nextQuestion, 200);
+  } else {
+    div.style.background = "red";
+  }
+}
+
+// 下一題
+function nextQuestion() {
+  current++;
+  if (current >= questions.length) {
+    alert("完成！時間：" + document.getElementById("timer").innerText);
+    location.reload();
+  } else {
+    showQuestion();
+  }
+}
+
+// 🔥🔥🔥 關鍵修正：用畫面中心判定
+document.addEventListener("click", () => {
+  if (mode !== "aim") return;
+
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
+
+  const targets = document.querySelectorAll(".option");
+
+  targets.forEach(div => {
+    const rect = div.getBoundingClientRect();
+
+    if (
+      centerX >= rect.left &&
+      centerX <= rect.right &&
+      centerY >= rect.top &&
+      centerY <= rect.bottom
+    ) {
+      checkAnswer(div.innerText, div);
+    }
+  });
+});
+
+// 移動靶
+function startMovingTargets() {
+  const targets = document.querySelectorAll(".option");
+  const container = document.getElementById("options");
+  const rect = container.getBoundingClientRect();
+
+  targets.forEach(div => {
+    let vx = (Math.random() - 0.5) * 1;
+    let vy = (Math.random() - 0.5) * 1;
+
+    function move() {
+      let x = parseFloat(div.style.left);
+      let y = parseFloat(div.style.top);
+      let size = parseFloat(div.style.width);
+
+      x += vx;
+      y += vy;
+
+      if (x <= 0 || x + size >= rect.width) vx *= -1;
+      if (y <= 0 || y + size >= rect.height) vy *= -1;
+
+      div.style.left = x + "px";
+      div.style.top = y + "px";
+
+      requestAnimationFrame(move);
+    }
+
+    move();
+  });
+}
 </script>
 
 </body>
