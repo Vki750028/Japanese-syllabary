@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>50音挑戰</title>
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    color: white;
+    font-family: sans-serif;
+    text-align: center;
+  }
+
+  #question {
+    font-size: 80px;
+    margin-top: 40px;
+  }
+
+  #timer {
+    margin-top: 10px;
+    font-size: 20px;
+  }
+
+  #options {
+    position: relative;
+    width: 100vw;
+    height: 60vh;
+  }
+
+  .option {
+    position: absolute;
+    border-radius: 50%;
+    padding: 20px;
+    background: #333;
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="question"></div>
+<div id="timer">0.0s</div>
+<div id="options"></div>
+
+<script>
+const data = [
+  { jp: "あ", romaji: "a" },
+  { jp: "い", romaji: "i" },
+  { jp: "う", romaji: "u" },
+  { jp: "え", romaji: "e" },
+  { jp: "お", romaji: "o" }
+];
+
+let questions = [...data].sort(() => Math.random() - 0.5);
+let current = 0;
+let startTime = Date.now();
+
+function updateTimer() {
+  const t = ((Date.now() - startTime) / 1000).toFixed(1);
+  document.getElementById("timer").innerText = t + "s";
+  requestAnimationFrame(updateTimer);
+}
+updateTimer();
+
+function showQuestion() {
+  const q = questions[current];
+  document.getElementById("question").innerText = q.jp;
+
+  const optionsDiv = document.getElementById("options");
+  optionsDiv.innerHTML = "";
+
+  let choices = [q.romaji];
+
+  while (choices.length < 4) {
+    const r = data[Math.floor(Math.random() * data.length)].romaji;
+    if (!choices.includes(r)) choices.push(r);
+  }
+
+  choices = choices.sort(() => Math.random() - 0.5);
+
+  choices.forEach((c, i) => {
+    const div = document.createElement("div");
+    div.className = "option";
+    div.innerText = c;
+
+    // 隨機位置
+    const positions = [
+        { x: 20, y: 20 },
+        { x: 60, y: 20 },
+        { x: 20, y: 50 },
+        { x: 60, y: 50 },
+    ];
+
+    div.style.left = positions[i].x + "vw";
+    div.style.top = positions[i].y + "vh";
+    div.style.width = "80px";
+    div.style.height = "80px";
+    div.style.display = "flex";
+    div.style.alignItems = "center";
+    div.style.justifyContent = "center";
+    div.style.fontSize = "20px";
+
+    div.onclick = () => {
+      if (c === q.romaji) {
+        current++;
+        if (current >= questions.length) {
+          alert("完成！時間：" + document.getElementById("timer").innerText);
+          location.reload();
+        } else {
+          showQuestion();
+        }
+      } else {
+        div.style.background = "red";
+      }
+    };
+
+    optionsDiv.appendChild(div);
+  });
+}
+
+showQuestion();
+</script>
+
+</body>
+</html>
