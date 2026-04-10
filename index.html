@@ -12,6 +12,7 @@ body {
   color: white;
   font-family: sans-serif;
   text-align: center;
+  cursor: default;
 }
 
 /* 首頁 */
@@ -55,13 +56,14 @@ button {
   z-index: 10;
 }
 
+/* 遊戲區 */
 #options {
   position: relative;
   width: 100vw;
   overflow: hidden;
 }
 
-/* 選項圓 */
+/* 圓圈 */
 .option {
   position: absolute;
   border-radius: 50%;
@@ -69,38 +71,14 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
+  user-select: none;
+  cursor: pointer;
 }
 
-/* 準心 */
-#crosshair {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  width: 20px;
-  height: 20px;
-  margin-left: -10px;
-  margin-top: -10px;
-  pointer-events: none;
-  display: none;
-}
-
-#crosshair::before,
-#crosshair::after {
-  content: "";
-  position: absolute;
-  background: red;
-}
-
-#crosshair::before {
-  width: 20px;
-  height: 2px;
-  top: 9px;
-}
-
-#crosshair::after {
-  width: 2px;
-  height: 20px;
-  left: 9px;
+/* 🔥 全部都強制準心 */
+body.aim-mode,
+body.aim-mode * {
+  cursor: crosshair !important;
 }
 </style>
 </head>
@@ -111,7 +89,7 @@ button {
 <div id="menu">
   <h1>日文反應訓練</h1>
   <button onclick="chooseMode('normal')">🎯 普通模式</button>
-  <button onclick="chooseMode('aim')">🔫 準星模式</button>
+  <button id="aimBtn" onclick="chooseMode('aim')">🔫 準星模式</button>
 </div>
 
 <!-- 開始畫面 -->
@@ -127,9 +105,15 @@ button {
   <div id="options"></div>
 </div>
 
-<div id="crosshair"></div>
-
 <script>
+// 📱 判斷手機
+const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
+
+// 👉 手機隱藏準星模式
+if (isMobile) {
+  document.getElementById("aimBtn").style.display = "none";
+}
+
 // 題庫
 const data = [
   { jp: "あ", romaji: "a" },
@@ -145,8 +129,12 @@ let questions, current, startTime;
 // 選模式
 function chooseMode(m) {
   mode = m;
+
   document.getElementById("menu").style.display = "none";
   document.getElementById("startScreen").style.display = "flex";
+
+  // 👉 切換滑鼠樣式
+  document.body.classList.remove("aim-mode");
 }
 
 // 開始遊戲
@@ -154,12 +142,9 @@ function beginGame() {
   document.getElementById("startScreen").style.display = "none";
   document.getElementById("game").style.display = "block";
 
-  // 🔥 先關掉準心（避免普通模式出現）
-  document.getElementById("crosshair").style.display = "none";
-
+  // 👉 準星模式 → 滑鼠變準心
   if (mode === "aim") {
-    document.body.requestPointerLock();
-    document.getElementById("crosshair").style.display = "block";
+    document.body.classList.add("aim-mode");
   }
 
   questions = [...data].sort(() => Math.random() - 0.5);
@@ -171,7 +156,7 @@ function beginGame() {
   showQuestion();
 }
 
-// 手機高度
+// 手機高度修正
 function setGameArea() {
   document.getElementById("options").style.height =
     (window.innerHeight - 140) + "px";
@@ -237,14 +222,13 @@ function showQuestion() {
     div.style.height = size + "px";
     div.style.fontSize = size * 0.3 + "px";
 
-    // 普通模式點擊
-    if (mode === "normal") {
-      div.onclick = () => checkAnswer(c, div);
-    }
+    // 👉 點擊（兩種模式共用）
+    div.onclick = () => checkAnswer(c, div);
 
     optionsDiv.appendChild(div);
   });
 
+  // 👉 準星模式加移動靶
   if (mode === "aim") {
     startMovingTargets();
   }
@@ -272,29 +256,6 @@ function nextQuestion() {
     showQuestion();
   }
 }
-
-// 🔥🔥🔥 關鍵修正：用畫面中心判定
-document.addEventListener("click", () => {
-  if (mode !== "aim") return;
-
-  const centerX = window.innerWidth / 2;
-  const centerY = window.innerHeight / 2;
-
-  const targets = document.querySelectorAll(".option");
-
-  targets.forEach(div => {
-    const rect = div.getBoundingClientRect();
-
-    if (
-      centerX >= rect.left &&
-      centerX <= rect.right &&
-      centerY >= rect.top &&
-      centerY <= rect.bottom
-    ) {
-      checkAnswer(div.innerText, div);
-    }
-  });
-});
 
 // 移動靶
 function startMovingTargets() {
