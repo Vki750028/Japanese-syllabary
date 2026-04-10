@@ -12,70 +12,54 @@ body {
   color: white;
   font-family: sans-serif;
   text-align: center;
-  cursor: default;
 }
 
-/* 首頁 */
-#menu {
-  margin-top: 100px;
-}
+#menu { margin-top: 80px; }
 
-button {
-  padding: 15px 30px;
+button, select {
+  padding: 10px 20px;
   margin: 10px;
-  font-size: 18px;
+  font-size: 16px;
 }
 
-/* 遊戲 */
-#game {
-  display: none;
-}
+#game { display: none; }
 
 #question {
-  font-size: 70px;
+  font-size: 60px;
   margin-top: 10px;
 }
 
-#timer {
-  margin-top: 5px;
-}
+#timer { margin: 5px; }
 
-/* 開始畫面 */
 #startScreen {
   display: none;
   position: fixed;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
   background: #000c;
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  font-size: 28px;
   z-index: 10;
 }
 
-/* 遊戲區 */
 #options {
   position: relative;
   width: 100vw;
   overflow: hidden;
 }
 
-/* 圓圈 */
 .option {
   position: absolute;
   border-radius: 50%;
   background: #333;
   display: flex;
-  align-items: center;
   justify-content: center;
-  user-select: none;
+  align-items: center;
   cursor: pointer;
 }
 
-/* 🔥 全部都強制準心 */
+/* 準心模式 */
 body.aim-mode,
 body.aim-mode * {
   cursor: crosshair !important;
@@ -88,14 +72,21 @@ body.aim-mode * {
 <!-- 首頁 -->
 <div id="menu">
   <h1>日文反應訓練</h1>
+
+  <select id="difficulty">
+    <option value="basic">初級（50音）</option>
+    <option value="advanced">中級（+濁音）</option>
+    <option value="all">全部（最難）</option>
+  </select><br>
+
   <button onclick="chooseMode('normal')">🎯 普通模式</button>
   <button id="aimBtn" onclick="chooseMode('aim')">🔫 準星模式</button>
 </div>
 
 <!-- 開始畫面 -->
 <div id="startScreen">
-  <div>50音挑戰</div>
-  <button onclick="beginGame()">點擊開始</button>
+  <div>點擊開始</div>
+  <button onclick="beginGame()">開始</button>
 </div>
 
 <!-- 遊戲 -->
@@ -106,48 +97,55 @@ body.aim-mode * {
 </div>
 
 <script>
-// 📱 判斷手機
+// 📱 手機判斷
 const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
-
-// 👉 手機隱藏準星模式
 if (isMobile) {
   document.getElementById("aimBtn").style.display = "none";
 }
 
-// 題庫
-const data = [
-  { jp: "あ", romaji: "a" },
-  { jp: "い", romaji: "i" },
-  { jp: "う", romaji: "u" },
-  { jp: "え", romaji: "e" },
-  { jp: "お", romaji: "o" }
-];
+// ===== 題庫 =====
+const DATA = {
+  basic: [
+    { jp:"あ",romaji:"a"},{ jp:"い",romaji:"i"},{ jp:"う",romaji:"u"},{ jp:"え",romaji:"e"},{ jp:"お",romaji:"o"},
+    { jp:"か",romaji:"ka"},{ jp:"き",romaji:"ki"},{ jp:"く",romaji:"ku"},{ jp:"け",romaji:"ke"},{ jp:"こ",romaji:"ko"},
+    { jp:"さ",romaji:"sa"},{ jp:"し",romaji:"shi"},{ jp:"す",romaji:"su"},{ jp:"せ",romaji:"se"},{ jp:"そ",romaji:"so"},
+    { jp:"た",romaji:"ta"},{ jp:"ち",romaji:"chi"},{ jp:"つ",romaji:"tsu"},{ jp:"て",romaji:"te"},{ jp:"と",romaji:"to"}
+  ],
+  advanced: [
+    { jp:"が",romaji:"ga"},{ jp:"ぎ",romaji:"gi"},{ jp:"ぐ",romaji:"gu"},{ jp:"げ",romaji:"ge"},{ jp:"ご",romaji:"go"}
+  ],
+  expert: [
+    { jp:"きゃ",romaji:"kya"},{ jp:"きゅ",romaji:"kyu"},{ jp:"きょ",romaji:"kyo"}
+  ]
+};
 
-let mode = "normal";
-let questions, current, startTime;
+let mode, questions = [], current = 0, startTime;
 
 // 選模式
 function chooseMode(m) {
   mode = m;
-
   document.getElementById("menu").style.display = "none";
   document.getElementById("startScreen").style.display = "flex";
-
-  // 👉 切換滑鼠樣式
-  document.body.classList.remove("aim-mode");
 }
 
-// 開始遊戲
+// 開始
 function beginGame() {
   document.getElementById("startScreen").style.display = "none";
   document.getElementById("game").style.display = "block";
 
-  // 👉 準星模式 → 滑鼠變準心
-  if (mode === "aim") {
-    document.body.classList.add("aim-mode");
-  }
+  if (mode === "aim") document.body.classList.add("aim-mode");
 
-  questions = [...data].sort(() => Math.random() - 0.5);
+  // 🎯 選難度
+  const diff = document.getElementById("difficulty").value;
+
+  let pool = [];
+  if (diff === "basic") pool = [...DATA.basic];
+  else if (diff === "advanced") pool = [...DATA.basic, ...DATA.advanced];
+  else pool = [...DATA.basic, ...DATA.advanced, ...DATA.expert];
+
+  // 🔥 隨機 + 只取10題
+  questions = pool.sort(() => Math.random() - 0.5).slice(0, 10);
+
   current = 0;
   startTime = Date.now();
 
@@ -156,7 +154,7 @@ function beginGame() {
   showQuestion();
 }
 
-// 手機高度修正
+// 高度修正
 function setGameArea() {
   document.getElementById("options").style.height =
     (window.innerHeight - 140) + "px";
@@ -170,7 +168,7 @@ function updateTimer() {
   requestAnimationFrame(updateTimer);
 }
 
-// 顯示題目
+// 題目
 function showQuestion() {
   const q = questions[current];
   document.getElementById("question").innerText = q.jp;
@@ -181,11 +179,11 @@ function showQuestion() {
   let choices = [q.romaji];
 
   while (choices.length < 4) {
-    const r = data[Math.floor(Math.random() * data.length)].romaji;
+    const r = DATA.basic[Math.floor(Math.random()*DATA.basic.length)].romaji;
     if (!choices.includes(r)) choices.push(r);
   }
 
-  choices = choices.sort(() => Math.random() - 0.5);
+  choices.sort(() => Math.random() - 0.5);
 
   const rect = optionsDiv.getBoundingClientRect();
   const placed = [];
@@ -207,10 +205,7 @@ function showQuestion() {
       for (let p of placed) {
         let dx = p.x - x;
         let dy = p.y - y;
-        if (Math.sqrt(dx*dx + dy*dy) < 80) {
-          safe = false;
-          break;
-        }
+        if (Math.sqrt(dx*dx + dy*dy) < 80) safe = false;
       }
     }
 
@@ -222,16 +217,16 @@ function showQuestion() {
     div.style.height = size + "px";
     div.style.fontSize = size * 0.3 + "px";
 
-    // 👉 點擊（兩種模式共用）
     div.onclick = () => checkAnswer(c, div);
 
     optionsDiv.appendChild(div);
   });
 
-  // 👉 準星模式加移動靶
+  // 🔥 準心模式 → 啟動移動靶
   if (mode === "aim") {
     startMovingTargets();
   }
+  
 }
 
 // 判斷
@@ -257,15 +252,16 @@ function nextQuestion() {
   }
 }
 
-// 移動靶
 function startMovingTargets() {
   const targets = document.querySelectorAll(".option");
   const container = document.getElementById("options");
   const rect = container.getBoundingClientRect();
 
   targets.forEach(div => {
-    let vx = (Math.random() - 0.5) * 1;
-    let vy = (Math.random() - 0.5) * 1;
+
+    // 每個靶不同速度
+    let vx = (Math.random() - 0.5) * 2;
+    let vy = (Math.random() - 0.5) * 2;
 
     function move() {
       let x = parseFloat(div.style.left);
@@ -275,6 +271,7 @@ function startMovingTargets() {
       x += vx;
       y += vy;
 
+      // 邊界反彈
       if (x <= 0 || x + size >= rect.width) vx *= -1;
       if (y <= 0 || y + size >= rect.height) vy *= -1;
 
@@ -287,6 +284,7 @@ function startMovingTargets() {
     move();
   });
 }
+
 </script>
 
 </body>
