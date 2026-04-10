@@ -4,40 +4,50 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>50音挑戰</title>
+
 <style>
-  body {
-    margin: 0;
-    background: #111;
-    color: white;
-    font-family: sans-serif;
-    text-align: center;
-  }
+body {
+  margin: 0;
+  background: #111;
+  color: white;
+  font-family: sans-serif;
+  text-align: center;
+}
 
-  #question {
-    font-size: 80px;
-    margin-top: 40px;
-  }
+#question {
+  font-size: 80px;
+  margin-top: 30px;
+}
 
-  #timer {
-    margin-top: 10px;
-    font-size: 20px;
-  }
+#timer {
+  margin-top: 10px;
+  font-size: 20px;
+}
 
-  #options {
-    position: relative;
-    width: 100vw;
-    height: 60vh;
-  }
+#options {
+  position: relative;
+  width: 100vw;
+  height: 60vh;
+}
 
-  .option {
-    position: absolute;
-    border-radius: 50%;
-    padding: 20px;
-    background: #333;
-    cursor: pointer;
-    user-select: none;
-    touch-action: manipulation;
-  }
+.option {
+  position: absolute;
+  border-radius: 50%;
+  background: #333;
+  cursor: pointer;
+  user-select: none;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  touch-action: manipulation;
+  transition: 0.2s;
+}
+
+.option:active {
+  transform: scale(0.9);
+}
 </style>
 </head>
 
@@ -48,6 +58,7 @@
 <div id="options"></div>
 
 <script>
+// 🔤 資料（先用少量，之後可以補50音）
 const data = [
   { jp: "あ", romaji: "a" },
   { jp: "い", romaji: "i" },
@@ -60,6 +71,7 @@ let questions = [...data].sort(() => Math.random() - 0.5);
 let current = 0;
 let startTime = Date.now();
 
+// ⏱ 計時器
 function updateTimer() {
   const t = ((Date.now() - startTime) / 1000).toFixed(1);
   document.getElementById("timer").innerText = t + "s";
@@ -67,6 +79,7 @@ function updateTimer() {
 }
 updateTimer();
 
+// 🎯 顯示題目
 function showQuestion() {
   const q = questions[current];
   document.getElementById("question").innerText = q.jp;
@@ -76,44 +89,74 @@ function showQuestion() {
 
   let choices = [q.romaji];
 
+  // 加入錯誤選項
   while (choices.length < 4) {
     const r = data[Math.floor(Math.random() * data.length)].romaji;
     if (!choices.includes(r)) choices.push(r);
   }
 
+  // 打亂
   choices = choices.sort(() => Math.random() - 0.5);
 
-  choices.forEach((c, i) => {
+  const placed = [];
+
+  choices.forEach((c) => {
     const div = document.createElement("div");
     div.className = "option";
     div.innerText = c;
 
-    // 隨機位置
-    const positions = [
-        { x: 20, y: 20 },
-        { x: 60, y: 20 },
-        { x: 20, y: 50 },
-        { x: 60, y: 50 },
-    ];
+    // 🎲 隨機大小（手機可點）
+    let size = 60 + Math.random() * 40; // 60~100px
 
-    div.style.left = positions[i].x + "vw";
-    div.style.top = positions[i].y + "vh";
-    div.style.width = "80px";
-    div.style.height = "80px";
-    div.style.display = "flex";
-    div.style.alignItems = "center";
-    div.style.justifyContent = "center";
-    div.style.fontSize = "20px";
+    let x, y;
+    let safe = false;
+    let attempts = 0;
 
+    // 🧠 找不重疊位置
+    while (!safe && attempts < 50) {
+      safe = true;
+
+      x = Math.random() * 70 + 10; // 避免靠邊
+      y = Math.random() * 50 + 20;
+
+      for (let p of placed) {
+        const dx = p.x - x;
+        const dy = p.y - y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 20) {
+          safe = false;
+          break;
+        }
+      }
+
+      attempts++;
+    }
+
+    placed.push({ x, y });
+
+    // 🎨 套用位置與大小
+    div.style.left = x + "vw";
+    div.style.top = y + "vh";
+    div.style.width = size + "px";
+    div.style.height = size + "px";
+    div.style.fontSize = size * 0.3 + "px";
+
+    // 🎮 點擊邏輯
     div.onclick = () => {
       if (c === q.romaji) {
-        current++;
-        if (current >= questions.length) {
-          alert("完成！時間：" + document.getElementById("timer").innerText);
-          location.reload();
-        } else {
-          showQuestion();
-        }
+        div.style.background = "green";
+
+        setTimeout(() => {
+          current++;
+          if (current >= questions.length) {
+            alert("完成！時間：" + document.getElementById("timer").innerText);
+            location.reload();
+          } else {
+            showQuestion();
+          }
+        }, 200);
+
       } else {
         div.style.background = "red";
       }
